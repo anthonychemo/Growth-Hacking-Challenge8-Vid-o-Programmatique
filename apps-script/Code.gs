@@ -453,11 +453,18 @@ function validateScript_(s, sourceText) {
       });
     }
   });
-  if (total < minW || total > maxW) pb.push('total ' + total + ' mots hors de [' + minW + ', ' + maxW + ']');
+  if (total < minW || total > maxW) {
+    const per = sc.map(function (x, i) { return 'scène ' + (i + 1) + ' = ' + wordCount_(x.texte_voix_off) + ' mots'; }).join(', ');
+    pb.push('total ' + total + ' mots hors de [' + minW + ', ' + maxW + '] (' + per + '). ' +
+      (total < minW ? 'TROP COURT : développe chaque scène (phrases complètes, détails prouvés par les PDF) pour viser ~' + Math.round((minW + maxW) / 2) + ' mots au total, soit 28 à 38 mots par scène sur les scènes 2 et 3.'
+                    : 'TROP LONG : raccourcis pour viser ~' + Math.round((minW + maxW) / 2) + ' mots au total.'));
+  }
   if (!s.email || !s.email.objet || !s.email.corps) pb.push('email.objet / email.corps manquants');
   else if (/https?:\/\//.test(s.email.corps)) pb.push('email.corps ne doit pas contenir de lien (ajouté automatiquement)');
   return pb;
 }
+
+const MAX_ATTEMPTS = 5;
 
 function generateScript_(option, docs, runId, usage) {
   const pr = promptRow_(option === 'A' ? 'SCRIPT_OPTION_A' : 'SCRIPT_OPTION_B');
@@ -469,15 +476,17 @@ function generateScript_(option, docs, runId, usage) {
   const sources = docs.join('\n\n');
   const system = fill_(pr.system, vars) + '\n\n' + tone;
   let feedback = '', last = [];
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const user = fill_(pr.user, vars) + (feedback ? '\n\nCORRECTIONS OBLIGATOIRES (ta tentative précédente a été rejetée) :\n- ' + feedback : '');
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const user = fill_(pr.user, vars) + '\n\nCONTRAINTE DE LONGUEUR (impérative) : au total entre ' + vars.mots_min + ' et ' + vars.mots_max + ' mots de voix off, soit environ 28 mots (scène 1), 38 (scène 2), 36 (scène 3), 22 (scène 4). Une vidéo de 45 à 60 s exige ce volume : un script plus court sera rejeté.' + (feedback ? '\n\nCORRECTIONS OBLIGATOIRES (ta tentative précédente a été rejetée) :\n- ' + feedback : '');
     const s = geminiJson_(system, [{ text: user }], SCRIPT_SCHEMA, Math.min(0.9, pr.temperature + 0.15 * (attempt - 1)), pr.model, usage);
     last = validateScript_(s, sources);
     if (!last.length) { log_('INFO', 'SCRIPT_LLM', 'Script valide à la tentative ' + attempt + ' (' + sumWords_(s) + ' mots)', runId); return s; }
     log_('INFO', 'SCRIPT_LLM', 'Tentative ' + attempt + ' rejetée : ' + last.join(' | '), runId);
-    feedback = last.join('\n- ');
+    // On renvoie au modèle sa propre voix off pour qu'il la corrige (rallonge/raccourcit) au lieu de repartir de zéro.
+    feedback = last.join('\n- ') + '\n- Voici ta voix off rejetée, à réécrire en corrigeant ces points sans inventer de fait :\n' +
+      (Array.isArray(s.scenes) ? s.scenes : []).map(function (x) { return '  scène ' + x.scene_id + ' (' + wordCount_(x.texte_voix_off) + ' mots) : ' + x.texte_voix_off; }).join('\n');
   }
-  throw new Error('Script non conforme après 3 tentatives : ' + last.join(' | '));
+  throw new Error('Script non conforme après ' + MAX_ATTEMPTS + ' tentatives : ' + last.join(' | '));
 }
 
 function sumWords_(s) { return s.scenes.reduce(function (a, x) { return a + wordCount_(x.texte_voix_off); }, 0); }
@@ -671,7 +680,13 @@ function createDraft_(script, videoUrl) {
     '<p><a href="' + videoUrl + '" style="background:#4f46e5;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">▶ Voir la vidéo (45-60 s)</a></p>' +
     (cal ? '<p><a href="' + cal + '">📅 Réserver un créneau</a></p>' : '');
   const draft = GmailApp.createDraft('', script.email.objet, plain, { htmlBody: html });   // destinataire à saisir par l'humain
-  return 'https://mail.google.com/mail/u/0/#drafts?compose=' + draft.getMessage().getId();
+  // Le lien direct vers le brouillon exige un droit de lecture Gmail (getMessage) que le script n'a pas :
+  // on tente, et on se rabat sur le dossier Brouillons (le brouillon est déjà créé à ce stade).
+  try {
+    return 'https://mail.google.com/mail/u/0/#drafts?compose=' + draft.getMessage().getId();
+  } catch (e) {
+    return 'https://mail.google.com/mail/u/0/#drafts';
+  }
 }
 
 // ============================== INITIALISATION DU CLASSEUR ==============================
