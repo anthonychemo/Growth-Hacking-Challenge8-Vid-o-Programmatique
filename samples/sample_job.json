@@ -1,0 +1,21 @@
+{
+  "_note": "Job de TEST (candidat fictif). En production, ce JSON est servi par l'Apps Script (action get_job).",
+  "run_id": "LOCAL",
+  "option": "B",
+  "voice": "fr-FR-HenriNeural",
+  "resolution": "1080p",
+  "script": {
+    "titre_video": "Candidature — Ingénieur DevOps Cloud",
+    "poste_cible": "Ingénieur DevOps Cloud",
+    "scenes": [
+      {"scene_id": 1, "titre_ecran": "Pourquoi votre équipe DevOps", "mots_cles_ecran": ["Cloud AWS", "CI/CD", "Automatisation"],
+       "texte_voix_off": "Bonjour ! Automatiser les déploiements cloud est exactement la mission que vous proposez, et c'est celle qui me passionne depuis mes projets d'école d'ingénieurs."},
+      {"scene_id": 2, "titre_ecran": "Une preuve concrète", "mots_cles_ecran": ["Terraform", "GitHub Actions", "Docker"],
+       "texte_voix_off": "Durant mon projet d'architecture cloud, j'ai déployé une application web sur AWS avec Terraform, conteneurisée avec Docker, et livrée par un pipeline GitHub Actions entièrement automatisé, de la validation du code jusqu'à la mise en production."},
+      {"scene_id": 3, "titre_ecran": "Ce que j'apporte dès le premier mois", "mots_cles_ecran": ["Fiabilité", "Qualité logicielle", "Esprit d'équipe"],
+       "texte_voix_off": "Je peux rapidement fiabiliser vos pipelines, documenter vos infrastructures et renforcer la qualité des livraisons, tout en m'intégrant à votre équipe avec rigueur et curiosité."},
+      {"scene_id": 4, "titre_ecran": "Échangeons ensemble", "mots_cles_ecran": ["Entretien visio", "Disponible"],
+       "texte_voix_off": "Je serais ravi d'en discuter avec vous. Réservez un créneau grâce au lien de l'e-mail, et à très bientôt !"}
+    ]
+  }
+}
